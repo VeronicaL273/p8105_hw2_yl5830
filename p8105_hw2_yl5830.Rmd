@@ -11,7 +11,7 @@ library(tidyverse)
 
 ## Problem1
 
-Input data and do using clean_names to clean the data. Using select() to choose the required coloumns and use mutate to convert 'entry' from character to logical variable.
+Input data and do using clean_names() to clean the data. Using select() to choose the required columns. Specially when treating all the route1~route11, I use the starts_with() function to simplify the process. And then I use mutate to convert 'entry' from character to logical variable.
 ```{r}
 nyctransit_df = 
   read_csv("./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv") |>
@@ -19,6 +19,91 @@ nyctransit_df =
   select(line, station_name, station_latitude, station_longitude, starts_with("route"), entry, vending, entrance_type, ada) |>
   mutate(entry = ifelse(entry == "YES", TRUE, FALSE))
 
-nyctransit_df
+head(nyctransit_df)
+
+num_rows = nrow(nyctransit_df)
+num_cols = ncol(nyctransit_df)
+cat("The dataset has", num_rows, "rows and", num_cols, "columns.\n")
+```
+
+### Summary:
+1. Variables in the data:
+  - line: The subway line the station belongs to.
+  - station_name: Name of the station.
+  - station_latitude / station_longitude: Geographic coordinates of the station.
+  - routes1~routes11: Subway routes served by the station.
+  - entry: whether the entrance allows entry.
+  - vending: Whether the entrance has a vending machine.
+  - entrance_type: Type of entrance 
+  - ada: whether the entrance is ADA compliant.
+
+2. Cleaning steps:
+After using clean_names() to rename the variables, I retained the relevant columns, converted the entry column to a logical variable, and inspected the data for consistency. The dataset contains 1868 rows and 19 columns. As far as I am concerned, the data is relatively neat because each row corresponds to an entry and each variable has a different value.
+
+
+### Quesiton1
+Number of distinct stations.
+```{r}
+distinct_stations = nyctransit_df |>
+  distinct(line, station_name)
+
+num_distinct_stations <- nrow(distinct_stations)
+cat("Number of distinct stations: ", num_distinct_stations, "\n")
+```
+
+### Question2
+Number of stations that are ADA compliant.
+```{r}
+ada_compliant = nyctransit_df |>
+  filter(ada == "TRUE") |>
+  distinct(line, station_name)
+
+num_ada_compliant = nrow(ada_compliant)
+cat("Number of ADA compliant stations: ", num_ada_compliant, "\n")
+```
+
+### Quesiton3
+Proportion of entrances without vending allow entrance.
+```{r}
+no_vending_entry = nyctransit_df |>
+  filter(vending == "NO") |>
+  summarise(proportion_entry = mean(entry))
+
+cat("Proportion of entrances without vending allow entrance: ", no_vending_entry$proportion_entry, "\n")
+```
+
+### Question4
+Reformat the dataset. 
+Using mutate(across(...)) to convert all route columns to characters so that all route1~route11 columns are characters.
+Using pivot_longer to combine all route1~route11 columns into a single "route_name" column and make the original column as "route_number".(I am bit confuse about the description)
+```{r}
+# Use pivot_longer to combine all route1~route11 columns into a single "route" column
+
+transit_reformat = nyctransit_df |>
+  mutate(across(starts_with("route"), as.character)) |>
+   pivot_longer(route1:route11, names_to = "route_number", values_to = "route_name", values_drop_na = TRUE)
+head(transit_reformat)
+```
+
+
+Filter the dataset to find stations that serve the A train and count the number of distinct stations serving the A train
+```{r}
+a_train_stations = transit_reformat |>
+  filter(route_name == "A") |>
+  distinct(line, station_name)
+
+num_a_train_stations = nrow(a_train_stations)
+cat("Number of distinct stations serving the A train: ", num_a_train_stations, "\n")
+```
+
+Find the number of A train stations that are ADA compliant and count the number of ADA compliant stations serving the A train.
+```{r}
+ada_compliant_a_train = transit_reformat |>
+  filter(route_name == "A") |>
+  filter(ada == "TRUE") |>
+  distinct(line, station_name)
+
+num_ada_compliant_a_train = nrow(ada_compliant_a_train)
+cat("Number of ADA compliant stations serving the A train: ", num_ada_compliant_a_train, "\n")
 ```
 

@@ -1,0 +1,24 @@
+---
+title: "Homework2"
+author: "Yunjia Liu"
+date: "2024-09-30"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+
+## Problem1
+
+Input data and do using clean_names to clean the data. Using select() to choose the required coloumns and use mutate to convert 'entry' from character to logical variable.
+```{r}
+nyctransit_df = 
+  read_csv("./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv") |>
+  janitor::clean_names() |>
+  select(line, station_name, station_latitude, station_longitude, starts_with("route"), entry, vending, entrance_type, ada) |>
+  mutate(entry = ifelse(entry == "YES", TRUE, FALSE))
+
+nyctransit_df
+```
+

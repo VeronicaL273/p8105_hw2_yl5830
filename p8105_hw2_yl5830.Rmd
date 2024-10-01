@@ -7,6 +7,7 @@ output: github_document
 
 ```{r setup, include=FALSE}
 library(tidyverse)
+library(readxl)
 ```
 
 ## Problem1
@@ -107,3 +108,56 @@ num_ada_compliant_a_train = nrow(ada_compliant_a_train)
 cat("Number of ADA compliant stations serving the A train: ", num_ada_compliant_a_train, "\n")
 ```
 
+## Problem2
+
+Input the data.
+```{r}
+mr_trash_wheel =
+  read_excel("./data/202309_Trash_Wheel_Collection_Data.xlsx", sheet = "Mr. Trash Wheel", skip = 1, na = c("NA", ".", "")) |>
+  janitor::clean_names() |>
+  drop_na(dumpster)|>
+  mutate(
+    sports_balls = as.integer(round(sports_balls, 0)),  # Round and convert to integer
+    trash_wheel = "Mr. Trash Wheel",
+    year = as.integer(year))
+```
+
+
+```{r}
+
+# Read and clean Professor Trash Wheel sheet
+prof_trash_wheel = read_excel("./data/202309_Trash_Wheel_Collection_Data.xlsx", 
+                                sheet = "Professor Trash Wheel", 
+                                skip = 1,  # Adjust based on where data starts
+                                col_names = TRUE,
+                                na = c("NA", ".", "")) |>
+  janitor::clean_names() |>
+  drop_na(dumpster)|>
+  mutate(
+    year = as.integer(year),
+    trash_wheel = "Professor Trash Wheel"
+  )
+
+# Read and clean Gwynnda's data sheet
+gwynnda_trash_wheel = read_excel("./data/202309_Trash_Wheel_Collection_Data.xlsx", 
+                                   sheet = "Gwynnda Trash Wheel", 
+                                   skip = 1,
+                                   col_names = TRUE,
+                                  na = c("NA", ".", "")) |>
+  janitor::clean_names() |>
+  drop_na(dumpster)|>
+  mutate(
+    year = as.integer(year),
+    trash_wheel = "Gwynnda Trash Wheel"
+  )
+
+# Combine datasets into one tidy dataset
+combined_trash_data <- bind_rows(mr_trash_wheel, prof_trash_wheel, gwynnda_trash_wheel)
+
+# Check combined data
+head(combined_trash_data)
+
+# Dimensions of the combined dataset
+cat("Number of observations in the combined dataset: ", nrow(combined_trash_data), "\n")
+
+```

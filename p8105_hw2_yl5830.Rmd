@@ -160,5 +160,4 @@ head(combined_trash_data)
 # Dimensions of the combined dataset
 cat("Number of observations in the combined dataset: ", nrow(combined_trash_data), "\n")
 
-
 ```

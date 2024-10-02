@@ -112,7 +112,7 @@ cat("Number of ADA compliant stations serving the A train: ", num_ada_compliant_
 
 ### 1. Process the data
 1.1 Input the data in 'Mr. Trash Wheel' Sheet from '202409_Trash_Wheel_Collection_Data.xlsx' and point to the specific sheet 'Mr. Trash Wheel'. I am skipping the first row because the it contains a picture and logo. Also, I use only col form A to N because the column O and column P are completely emtpy column. Then, use janitor::clean_names() to rename the variables and NA of 'dumpster' variable is dropped. According the requirement, I rounded the 'sports_balls' variable and convert it to integar and change the type of 'year' variables from character to integer. Finally, I use mutate() function to create a new column in order to record the sourcing ('Mr. Trash Wheel') of the dataset.
-```{r}
+```{r input and clean data from Mr. Trash Wheel}
 mr_trash_wheel =
   read_excel("./data/202409_Trash_Wheel_Collection_Data.xlsx", sheet = "Mr. Trash Wheel", range = cell_cols("A:N"), skip = 1, na = c("NA", ".", "")) |>
   janitor::clean_names() |>
@@ -125,7 +125,7 @@ mr_trash_wheel =
 
 
 1.2 Read and clean Professor Trash Wheel sheet & Gwynnda's data sheet. They are both skipping the first row because the sheet starts with a logo in the first row. Combine all three separate datasets together.
-```{r}
+```{r input and clean data from Prof and Gwynnda}
 prof_trash_wheel = read_excel("./data/202409_Trash_Wheel_Collection_Data.xlsx", 
                                 sheet = "Professor Trash Wheel", 
                                 skip = 1,  # Adjust based on where data starts
@@ -157,14 +157,14 @@ combined_trash_data <- bind_rows(mr_trash_wheel, prof_trash_wheel, gwynnda_trash
 
 ### 2. Answer to the question: 
 2.1.total weight of trash collected by Professor Trash Wheel
-```{r}
+```{r total weight of trash}
 total_weight_prof = combined_trash_data |>
   filter(trash_wheel == "Professor Trash Wheel") |>
   summarise(total_weight = sum(weight_tons, na.rm = TRUE))
 ```
 
 2.2. total number of cigarette butts collected by Gwynnda in June 2022:
-```{r}
+```{r total number of cigarette butts}
 total_cig_butts_gwynnda = combined_trash_data |>
   filter(trash_wheel == "Gwynnda Trash Wheel" & month(date) == 6 & year == 2022) |>
   summarise(total_cig_butts = sum(`cigarette_butts`, na.rm = TRUE))
@@ -172,7 +172,7 @@ total_cig_butts_gwynnda = combined_trash_data |>
 ```
 
 ### 3. Summary:
-```{r}
+```{r summary of answers to questions in problem2}
 n_observations = nrow(combined_trash_data)
 total_weight_prof = total_weight_prof$total_weight
 total_cig_butts_gwynnda = total_cig_butts_gwynnda$total_cig_butts
@@ -185,8 +185,8 @@ In June 2022, Gwynnda collected a total of", total_cig_butts_gwynnda, "cigarette
 
 
 ## Problem3
-Input three datasets. I split the 'baker_name' variable in the 'bakers.csv' because it is the full name of the baker, however the rest two datasets are using the first name of the baker.
-```{r}
+3.1 Input three datasets. I split the 'baker_name' variable in the 'bakers.csv' because it is the full name of the baker, however the rest two datasets are using the first name of the baker.
+```{r problem3_input, message=FALSE}
 
 bakers_df = 
   read_csv("./data/gbb_datasets/bakers.csv") |>
@@ -206,33 +206,121 @@ results_df =
 
 ```
 
-Using anti_join() to check for completeness and correctness across datasets 
-```{r}
+3.2 Using anti_join() to check for completeness and correctness across datasets 
+```{r assessment for completeness and correctness}
 unmatched_bakes_bakers <- bakes_df%>%
   anti_join(bakers_df, by = c("baker", "series"))
-
 print(unmatched_bakes_bakers)
 
 unmatched_results_bakers <- results_df %>%
   anti_join(bakers_df, by = c("baker", "series"))
-
 print(unmatched_results_bakers)
 
 unmatched_bakes_results <- bakes_df %>%
   anti_join(results_df, by = c("baker", "series", "episode"))
-
 print(unmatched_bakes_results)
 ```
 
-From the results, it is obvious that the baker '\jo\' in bakes.csv and baker.csv
+3.3 From the results, it is obvious that the '\jo\' ('baker' variables) in bakes.csv and baker.csv is referring to the 'Joanne' ('baker' variables) in results.csv. The following code is for this correction, renaming the 'Joanne' and '\"Jo\"'to 'Jo' in the results_df and bakes_df respectively.
+```{r recleaning}
 
-First combine the bakes and corresponding results.
-```{r}
-results_bakes_df = 
-  left_join(results_df, bakes_df, by = c("baker", "series","episode"))
+results_df_clean = 
+  results_df |>
+  mutate(baker = recode(baker, 'Joanne' = 'Jo'))
 
-final_data =
-  left_join(results_bakes_df,bakers_df, by = c("baker", "series"))
+bakes_df_clean =
+  bakes_df |>
+  mutate(baker = recode(baker,'\"Jo\"' = 'Jo'))
 ```
 
+3.4 recheck the completeness and correctness across datasets after re-cleaning.
+```{r re_asessement}
+unmatched_bakes_bakers_clean <- bakes_df_clean%>%
+  anti_join(bakers_df, by = c("baker", "series"))
+print(unmatched_bakes_bakers_clean)
+
+unmatched_results_bakers_clean <- results_df_clean %>%
+  anti_join(bakers_df, by = c("baker", "series"))
+print(unmatched_results_bakers_clean)
+
+unmatched_bakes_results_clean <- bakes_df_clean %>%
+  anti_join(results_df_clean, by = c("baker", "series", "episode"))
+print(unmatched_bakes_results_clean)
+```
+
+3.5 Combine the bakes and corresponding results.
+
+I first combine the bakers_df and bake_df_clean using baker's first name and series they appear in so that the first name can be specific enough to point to one person. Then, I focus on the combine of the results_df. Since the bakes and results of same person have difference in each episode, so I use three variables in linking the dataset.
+```{r combine the dataset}
+final_data =
+  bakers_df |>
+  left_join(bakes_df_clean, by = c("baker", "series")) |>
+  left_join(results_df_clean, by = c("baker", "series","episode"))
+```
+
+3.6 Reformat some details.
+
+Since we have baker's full name in baker.csv file, I am dropping baker's first name coloumn('baker' variable) from bake.csv and results.csv. Also,the columns are ordered in a way easy for users to look up. It starts with the series and episode, then comes with the biography of the baker and their signature bake, and finally is their technical score given by the judge and result. I have re-coded the result into a readable way according to the caption in results.csv file.
+
+```{r last reformat of the combined dataset}
+final_data_clean = 
+  final_data |>
+  select(series, episode, baker_name, baker_age, baker_occupation, hometown, signature_bake, show_stopper, technical, result) |>
+  mutate(
+    result = recode(result, "IN" = "stayed in", 'OUT' = 'Eliminated','STAR BAKER' = 'Star Baker', 'WINNER' = 'Series Winner', 'Runner-up' = 'Series Runner up', 'WD' = 'withdrew')
+  )
+
+
+dim(final_data_clean)
+str(final_data_clean)
+head(final_data)
+summary(final_data_clean)
+
+write_csv(final_data_clean, "./data/final_bake_off_data.csv")
+
+```
+
+Discuss about the final_data_clean:
+
+The dataset has 10 variables covering the exact series and episode show that each baker was in,  biography of the bakers, their bake and their result. In total, we have 573 rated bakes and their bakers. All the steps I used to clean and combine the data are written above. Please refer to 3.1~3.6 for the exact steps.
+
+3.7 Create a table of Star Bakers for Seasons 5-10
+```{r Star Bakers for Seasons 5-10}
+star_bakers = final_data_clean |>
+  filter(series %in% 5:10 & (result == "Star Baker"|result == "Series Winner")) |>
+  select(series, episode, baker_name, signature_bake, technical, result) |>
+  arrange(series, episode)
+
+print(star_bakers,n=Inf)
+
+```
+
+Conclusion: 
+- the dataset only supports series 5 to 8(since series 9 and 10 dosen't have the exact result for each baker)
+-We assume that there is a strong relationship between the number of times each baker gets a STAR BAKER and getting WINNER OF THE SEASON. That is to say, the more 'star bakers' a baker gets, the more likely he or she is to be the winner of the season. Therefore, we can comment the results on this base. For example, if someone got never/less times of star bakers win the season, we will call it a surprise.
+- In season5, Nancy Birtwhistle's winning is a surprise considering Richard Burr had won 4 'star bakers' over the season while Nancy only got one.
+- In season6 and season 7 , Nadiya Hussain and Candice Brown are absolutely predictable winners.They had won 'star bakers' throughout the season 3 times and twice, respectively. The number of times winning 'star bakers' are way over others.
+- In season 8, Sophie Faldo's winning of the series is quite a surprice since she had only won one 'Star Baker' during the whole season.
+
+3.8 Import, clean, and analyze viewers.csv
+```{r Import viewers_df, message=FALSE}
+viewers_df =
+  read_csv("./data/gbb_datasets/viewers.csv") |>
+  janitor::clean_names()
+```
+
+
+```{r clean and analyze viewers_df}
+# Show first 10 rows
+head(viewers_df,10)
+
+# Calculate average viewership for Seasons 1 and 5
+avg_viewership_season_1 = viewers_df |>
+  summarise(avg_viewership = mean(series_1, na.rm = TRUE))
+avg_viewership_season_5 = viewers_df |>
+  summarise(avg_viewership = mean(series_5, na.rm = TRUE))
+
+cat("the average viewership in Season 1:",avg_viewership_season_1$avg_viewership,"the average viewership in Season 5:",avg_viewership_season_5$avg_viewership,"")
+
+```
 

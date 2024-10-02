@@ -113,7 +113,7 @@ cat("Number of ADA compliant stations serving the A train: ", num_ada_compliant_
 Input the data.
 ```{r}
 mr_trash_wheel =
-  read_excel("./data/202309_Trash_Wheel_Collection_Data.xlsx", sheet = "Mr. Trash Wheel", skip = 1, na = c("NA", ".", "")) |>
+  read_excel("./data/202409_Trash_Wheel_Collection_Data.xlsx", sheet = "Mr. Trash Wheel", range = cell_cols("A:N"), skip = 1, na = c("NA", ".", "")) |>
   janitor::clean_names() |>
   drop_na(dumpster)|>
   mutate(
